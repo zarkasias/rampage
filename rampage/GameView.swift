@@ -52,9 +52,17 @@ struct GameView: UIViewRepresentable {
         private var displayLink: CADisplayLink?
         private var world = World(map: loadMap())
         private var lastFrameTime: CFTimeInterval?
+        private let joystickRadius: Double = 40
+        private let maximumTimeStep: Double = 1.0 / 20.0
+        private let worldTimeStep: Double = 1.0 / 120.0
+        private let panGesture = UIPanGestureRecognizer()
+
         
         func start(imageView: UIImageView) {
             self.imageView = imageView
+            
+            imageView.isUserInteractionEnabled = true
+            imageView.addGestureRecognizer(panGesture)
             
             let link = CADisplayLink(
                 target: self,
@@ -65,28 +73,74 @@ struct GameView: UIViewRepresentable {
             displayLink = link
         }
         
+        
+        private var inputVector: Vector {
+            switch panGesture.state {
+            case .began, .changed:
+                let translation = panGesture.translation(in: imageView)
+
+                var vector = Vector(
+                    x: Double(translation.x),
+                    y: Double(translation.y)
+                )
+
+                vector /= max(joystickRadius, vector.length)
+
+                panGesture.setTranslation(
+                    CGPoint(
+                        x: vector.x * joystickRadius,
+                        y: vector.y * joystickRadius
+                    ),
+                    in: imageView
+                )
+
+                return vector
+
+            default:
+                return Vector(x: 0, y: 0)
+            }
+        }
+
+        
+        
         @objc private func update(_ displayLink: CADisplayLink) {
             guard let imageView else { return }
-            
-            let currentTime = displayLink.timestamp
-             let timeStep = lastFrameTime.map {
-                 max(0, currentTime - $0)
-             } ?? 0
 
-             lastFrameTime = currentTime
+            let currentTime = displayLink.timestamp
+
             
-            world.update(timeStep: timeStep)
+            let timeStep = lastFrameTime.map {
+                min(maximumTimeStep, max(0, currentTime - $0))
+            } ?? 0
+
+
+            lastFrameTime = currentTime
+
             
+            let input = Input(velocity: inputVector)
+
+            let worldSteps = Int((timeStep / worldTimeStep).rounded(.up))
+
+            if worldSteps > 0 {
+                let stepDuration = timeStep / Double(worldSteps)
+
+                for _ in 0 ..< worldSteps {
+                    world.update(timeStep: stepDuration, input: input)
+                }
+            }
+
+
             let size = max(
-                   1,
-                   Int(min(imageView.bounds.width, imageView.bounds.height))
-               )
-            
+                1,
+                Int(min(imageView.bounds.width, imageView.bounds.height))
+            )
+
             var renderer = Renderer(width: size, height: size)
             renderer.draw(world)
-            
+
             imageView.image = UIImage(bitmap: renderer.bitmap)
         }
+
         
         func stop() {
             displayLink?.invalidate()
