@@ -30,8 +30,8 @@ private func loadMap() -> Tilemap {
 
 struct GameView: UIViewRepresentable {
 
-    func makeUIView(context: Context) -> UIImageView {
-        let imageView = UIImageView()
+    func makeUIView(context: Context) -> GameImageView {
+        let imageView = GameImageView()
 
         imageView.backgroundColor = .black
         imageView.contentMode = .scaleAspectFit
@@ -44,7 +44,7 @@ struct GameView: UIViewRepresentable {
     }
 
     func updateUIView(
-        _ uiView: UIImageView,
+        _ uiView: GameImageView,
         context: Context
     ) {
         // SwiftUI updates aren't needed yet.
@@ -55,7 +55,7 @@ struct GameView: UIViewRepresentable {
     }
 
     static func dismantleUIView(
-        _ uiView: UIImageView,
+        _ uiView: GameImageView,
         coordinator: Coordinator
     ) {
         coordinator.stop()
@@ -64,7 +64,7 @@ struct GameView: UIViewRepresentable {
     // MARK: - Game Coordinator
 
     class Coordinator {
-        private weak var imageView: UIImageView?
+        private weak var imageView: GameImageView?
         private var displayLink: CADisplayLink?
 
         // Game state
@@ -81,7 +81,7 @@ struct GameView: UIViewRepresentable {
 
         // MARK: - Start
 
-        func start(imageView: UIImageView) {
+        func start(imageView: GameImageView) {
             self.imageView = imageView
 
             imageView.addGestureRecognizer(panGesture)
@@ -95,7 +95,7 @@ struct GameView: UIViewRepresentable {
             displayLink = link
         }
 
-        // MARK: - Input
+        // MARK: - Touch Input
 
         private var inputVector: Vector {
             switch panGesture.state {
@@ -109,10 +109,11 @@ struct GameView: UIViewRepresentable {
                     y: Double(translation.y)
                 )
 
-                // Normalize and clamp input to length <= 1
-                vector /= max(joystickRadius, vector.length)
+                vector /= max(
+                    joystickRadius,
+                    vector.length
+                )
 
-                // Move the joystick origin as the finger drags
                 panGesture.setTranslation(
                     CGPoint(
                         x: vector.x * joystickRadius,
@@ -126,6 +127,22 @@ struct GameView: UIViewRepresentable {
             default:
                 return Vector(x: 0, y: 0)
             }
+        }
+
+        // MARK: - Combined Input
+
+        private var gameInputVector: Vector {
+            guard let imageView else {
+                return Vector(x: 0, y: 0)
+            }
+
+            // Keyboard takes priority when keys are held.
+            if imageView.hasKeyboardInput {
+                return imageView.keyboardVector
+            }
+
+            // Otherwise use the touch joystick.
+            return inputVector
         }
 
         // MARK: - Game Loop
@@ -144,8 +161,8 @@ struct GameView: UIViewRepresentable {
 
             lastFrameTime = currentTime
 
-            // Read joystick input once per frame
-            let joystick = inputVector
+            // Read keyboard or joystick input
+            let movement = gameInputVector
 
             // Calculate simulation steps
             let worldSteps = Int(
@@ -155,24 +172,21 @@ struct GameView: UIViewRepresentable {
             if worldSteps > 0 {
                 let stepDuration = timeStep / Double(worldSteps)
 
-                // Convert horizontal joystick movement
-                // into rotation measured in radians
+                // Calculate rotation
                 let rotationAngle =
-                    joystick.x *
+                    movement.x *
                     world.player.turningSpeed *
                     stepDuration
 
-                // Convert input into forward/backward
-                // movement and rotation
                 let input = Input(
-                    speed: -joystick.y,
+                    speed: -movement.y,
                     rotation: Rotation(
                         sine: sin(rotationAngle),
                         cosine: cos(rotationAngle)
                     )
                 )
 
-                // Update the world in smaller steps
+                // Update world
                 for _ in 0 ..< worldSteps {
                     world.update(
                         timeStep: stepDuration,
@@ -181,24 +195,26 @@ struct GameView: UIViewRepresentable {
                 }
             }
 
-            // Determine bitmap resolution
-            let size = max(
+            // Match the screen dimensions
+            let width = max(
                 1,
-                Int(min(
-                    imageView.bounds.width,
-                    imageView.bounds.height
-                ))
+                Int(imageView.bounds.width)
             )
 
-            // Render the world
+            let height = max(
+                1,
+                Int(imageView.bounds.height)
+            )
+
+            // Render first-person view
             var renderer = Renderer(
-                width: size,
-                height: size
+                width: width,
+                height: height
             )
 
             renderer.draw(world)
 
-            // Display the resulting bitmap
+            // Display frame
             imageView.image = UIImage(bitmap: renderer.bitmap)
         }
 
@@ -215,4 +231,3 @@ struct GameView: UIViewRepresentable {
         }
     }
 }
-
