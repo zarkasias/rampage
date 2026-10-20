@@ -51,17 +51,19 @@ public extension World {
 
    
     
+    
     mutating func update(timeStep: Double, input: Input) {
-        let oldPosition = player.position
+        // Rotate player's facing direction
+        player.direction = player.direction.rotated(by: input.rotation)
 
-        player.velocity = input.velocity * player.speed
+        // Move forwards or backwards
+        player.velocity = player.direction * input.speed * player.speed
         player.position += player.velocity * timeStep
 
-        
+        // Resolve collisions with walls
         while let intersection = player.intersection(with: map) {
             player.position -= intersection
         }
-
     }
 
 

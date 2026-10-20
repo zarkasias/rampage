@@ -22,34 +22,67 @@ public struct Renderer {
 
 public extension Renderer {
     mutating func draw(_ world: World) {
-        let scale = Double(bitmap.height) / world.size.y
+        
+        let focalLength = 1.0
+        let viewWidth = Double(bitmap.width) / Double(bitmap.height)
 
-        // Draw map
-        for y in 0 ..< world.map.height {
-            for x in 0 ..< world.map.width
-                where world.map[x, y].isWall {
+        
+        let viewPlane = world.player.direction.orthogonal * viewWidth
+        let viewCenter = world.player.position + world.player.direction * focalLength
+        let viewStart = viewCenter - viewPlane / 2
+        
+        let columns = bitmap.width
+        let step = viewPlane / Double(columns)
+        var columnPosition = viewStart
+        
+        for x in 0 ..< columns {
+            let rayDirection = columnPosition - world.player.position
+            let viewPlaneDistance = rayDirection.length
+            
+            let ray = Ray(origin: world.player.position, direction: rayDirection / viewPlaneDistance)
+            
+            // find the first wall hit
+            let end = world.map.hitTest(ray)
+            let wallDistance = (end - ray.origin).length
+            
+            // Calculate projected wall height
+            
+            let wallHeight = 1.0
 
-                let rect = Rect(
-                    min: Vector(
-                        x: Double(x),
-                        y: Double(y)
-                    ) * scale,
-                    max: Vector(
-                        x: Double(x + 1),
-                        y: Double(y + 1)
-                    ) * scale
-                )
+            let distanceRatio = viewPlaneDistance / focalLength
+            let perpendicular = wallDistance / distanceRatio
 
-                bitmap.fill(rect: rect, color: .white)
+            let height = wallHeight * focalLength /
+                perpendicular * Double(bitmap.height)
+
+            
+            // Draw vertical wall column
+            
+            // Determine wall color based on orientation
+            let wallColor: Color
+
+            if end.x.rounded(.down) == end.x {
+                wallColor = .white
+            } else {
+                wallColor = .gray
             }
+
+            // Draw vertical wall column
+            bitmap.drawLine(
+                from: Vector(
+                    x: Double(x),
+                    y: (Double(bitmap.height) - height) / 2
+                ),
+                to: Vector(
+                    x: Double(x),
+                    y: (Double(bitmap.height) + height) / 2
+                ),
+                color: wallColor
+            )
+
+            
+            columnPosition += step
         }
-
-        // Draw player
-        var rect = world.player.rect
-        rect.min *= scale
-        rect.max *= scale
-
-        bitmap.fill(rect: rect, color: .blue)
     }
 }
 
