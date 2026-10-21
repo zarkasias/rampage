@@ -8,8 +8,11 @@
 import Foundation
 
 
+
 public enum Thing: Int, Decodable {
-    case nothing
-    case player
+    case nothing = 0
+    case player = 1
+    case monster = 2
 }
+
 

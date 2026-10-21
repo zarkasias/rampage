@@ -44,6 +44,21 @@ public extension Renderer {
             world.player.direction * focalLength
 
         let viewStart = viewCenter - viewPlane / 2
+        
+        
+        // MARK: - Sort Monster Sprites
+
+        let spritesByDistance = world.sprites.sorted { first, second in
+            let firstDistance =
+                (first.start - world.player.position).length
+
+            let secondDistance =
+                (second.start - world.player.position).length
+
+            // Farthest sprites first
+            return firstDistance > secondDistance
+        }
+
 
         let columns = bitmap.width
         let step = viewPlane / Double(columns)
@@ -85,16 +100,25 @@ public extension Renderer {
 
             // MARK: - Wall Texture
 
+           
             let wallTexture: Bitmap
             let wallX: Double
 
+            // Determine which map tile the ray hit
+            let tile = world.map.tile(
+                at: end,
+                from: ray.direction
+            )
+
+            // Select the appropriate texture based on the tile
             if end.x.rounded(.down) == end.x {
-                wallTexture = textures[.crackWall]
+                wallTexture = textures[tile.textures[0]]
                 wallX = end.y - end.y.rounded(.down)
             } else {
-                wallTexture = textures[.crackWall2]
+                wallTexture = textures[tile.textures[1]]
                 wallX = end.x - end.x.rounded(.down)
             }
+
 
             let textureX = min(
                 wallTexture.width - 1,
@@ -120,8 +144,9 @@ public extension Renderer {
 
             // MARK: - Floor and Ceiling
 
-            let floorTexture = textures[.crackFloor]
-            let ceilingTexture = textures[.ceiling]
+            var cachedFloorTile: Tile?
+            var floorTexture: Bitmap?
+            var ceilingTexture: Bitmap?
 
             let floorStart =
                 Int(wallStart.y + height) + 1
@@ -153,6 +178,24 @@ public extension Renderer {
                 // Determine tile position
                 let tileX = mapPosition.x.rounded(.down)
                 let tileY = mapPosition.y.rounded(.down)
+                
+                
+                // Determine the floor tile at this world position
+                
+                let floorTile = world.map[Int(tileX), Int(tileY)]
+
+                if floorTile != cachedFloorTile {
+                    floorTexture = textures[floorTile.textures[0]]
+                    ceilingTexture = textures[floorTile.textures[1]]
+                    cachedFloorTile = floorTile
+                }
+
+                guard let floorTexture,
+                      let ceilingTexture else {
+                    continue
+                }
+
+
 
                 // MARK: - Normalized Texture Coordinates
 
@@ -171,6 +214,64 @@ public extension Renderer {
                     textureY
                 ]
             }
+            
+            
+            
+            // MARK: - Draw Monster Sprites
+
+            for sprite in spritesByDistance {
+
+                // Check whether this ray intersects the sprite
+                guard let hit = sprite.hitTest(ray) else {
+                    continue
+                }
+
+                // Calculate distance from player to sprite
+                let spriteDistance = (hit - ray.origin).length
+
+                // Do not draw sprites hidden behind walls
+                if spriteDistance > wallDistance {
+                    continue
+                }
+
+                // Correct perspective distortion
+                let spritePerpendicular =
+                    spriteDistance / distanceRatio
+
+                // Calculate the sprite's projected height
+                let spriteHeight =
+                    wallHeight * focalLength /
+                    spritePerpendicular * Double(bitmap.height)
+
+                // Determine the horizontal texture coordinate
+                let spriteX =
+                    (hit - sprite.start).length / sprite.length
+
+                let spriteTexture = textures[.monster2]
+
+                let spriteTextureX = min(
+                    spriteTexture.width - 1,
+                    max(
+                        0,
+                        Int(spriteX * Double(spriteTexture.width))
+                    )
+                )
+
+                // Position the sprite vertically on screen
+                let spriteStart = Vector(
+                    x: Double(x),
+                    y: (Double(bitmap.height) - spriteHeight) / 2 + 0.001
+                )
+
+                // Draw this column of the monster sprite
+                bitmap.drawColumn(
+                    spriteTextureX,
+                    of: spriteTexture,
+                    at: spriteStart,
+                    height: spriteHeight
+                )
+            }
+
 
             // MARK: - Next Column
 
@@ -178,6 +279,10 @@ public extension Renderer {
         }
     }
 }
+
+
+
+
 
 
 
