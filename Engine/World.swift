@@ -65,6 +65,61 @@ public extension World {
         // Move forwards or backwards
         player.velocity = player.direction * input.speed * player.speed
         player.position += player.velocity * timeStep
+        
+        
+        
+        
+        // Update monsters
+     
+        // Update monsters
+        for i in monsters.indices {
+            var monster = monsters[i]
+
+            monster.update(in: self)
+
+            // Move the monster based on velocity and elapsed time
+            monster.position += monster.velocity * timeStep
+
+            monsters[i] = monster
+        }
+
+
+        
+        
+        // Handle player-monster collisions
+        
+        for i in monsters.indices {
+            var monster = monsters[i]
+
+            // Player-to-monster collision
+            if let intersection = player.intersection(with: monster) {
+                player.position -= intersection / 2
+                monster.position += intersection / 2
+            }
+
+            // Monster-to-monster collisions
+            for j in (i + 1)..<monsters.count {
+                if let intersection = monster.intersection(with: monsters[j]) {
+                    monster.position -= intersection / 2
+                    monsters[j].position += intersection / 2
+                }
+            }
+
+            // Monster-to-wall collisions
+            while let intersection = monster.intersection(with: map) {
+                monster.position -= intersection
+            }
+
+            monsters[i] = monster
+        }
+
+        // Player-to-wall collisions (always last)
+        while let intersection = player.intersection(with: map) {
+            player.position -= intersection
+        }
+
+
+
 
         // Resolve collisions with walls
         while let intersection = player.intersection(with: map) {

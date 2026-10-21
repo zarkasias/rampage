@@ -6,6 +6,8 @@ build/
 DerivedData/
 *.xcuserstate
 
+image assets/
+
 # Xcode user-specific settings
 xcuserdata/
 
