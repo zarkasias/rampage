@@ -21,6 +21,8 @@ public struct Monster: Actor {
     
     public let speed: Double = 0.5
     public var velocity = Vector(x: 0, y: 0)
+    
+    public var animation: Animation = .monsterIdle
 
     
     public init(position: Vector) {
@@ -32,11 +34,13 @@ public struct Monster: Actor {
 public extension Monster {
    
     
+  
     mutating func update(in world: World) {
         switch state {
         case .idle:
             if canSeePlayer(in: world) {
                 state = .chasing
+                animation = .monsterWalk
             }
 
             velocity = Vector(x: 0, y: 0)
@@ -44,6 +48,7 @@ public extension Monster {
         case .chasing:
             guard canSeePlayer(in: world) else {
                 state = .idle
+                animation = .monsterIdle
                 velocity = Vector(x: 0, y: 0)
                 break
             }
@@ -59,6 +64,7 @@ public extension Monster {
             velocity = direction * (speed / distance)
         }
     }
+
 
 
     
@@ -84,3 +90,27 @@ public extension Monster {
     }
 
 }
+
+
+public extension Animation {
+    static let monsterIdle = Animation(
+        frames: [
+            .monsterIdle1,
+            .monsterIdle2,
+            .monsterIdle3,
+            .monsterIdle4
+        ],
+        duration: 0.8
+    )
+
+    static let monsterWalk = Animation(
+        frames: [
+            .monsterWalk1,
+            .monsterWalk2,
+            .monsterWalk3,
+            .monsterWalk4
+        ],
+        duration: 0.5
+    )
+}
+

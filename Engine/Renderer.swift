@@ -247,7 +247,7 @@ public extension Renderer {
                 let spriteX =
                     (hit - sprite.start).length / sprite.length
 
-                let spriteTexture = textures[.monster2]
+                let spriteTexture = textures[sprite.texture]
 
                 let spriteTextureX = min(
                     spriteTexture.width - 1,
