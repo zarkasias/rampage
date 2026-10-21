@@ -12,9 +12,11 @@ import Foundation
 public struct World {
     public let map: Tilemap
     public var player: Player
+    public var monsters: [Monster]
 
     public init(map: Tilemap) {
         self.map = map
+        self.monsters = []
 
         var startingPlayer: Player?
 
@@ -32,6 +34,10 @@ public struct World {
                     break
                 case .player:
                     startingPlayer = Player(position: position)
+                case .monster:
+                    self.monsters.append(
+                        Monster(position: position)
+                    )
                 }
             }
         }
@@ -68,5 +74,21 @@ public extension World {
 
 
 }
+
+
+public extension World {
+    var sprites: [Billboard] {
+        let spritePlane = player.direction.orthogonal
+
+        return monsters.map { monster in
+            Billboard(
+                start: monster.position - spritePlane / 2,
+                direction: spritePlane,
+                length: 1
+            )
+        }
+    }
+}
+
 
 

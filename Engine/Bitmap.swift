@@ -116,10 +116,58 @@ public extension Bitmap {
                 Int(sourceY)
             )
 
-            self[Int(point.x), y] = source[sourceX, textureY]
+            let sourceColor = source[sourceX, textureY]
+
+                    blendPixel(
+                        at: Int(point.x),
+                        y,
+                        with: sourceColor
+                    )
         }
     }
 
+
+    
+    mutating func blendPixel(
+        at x: Int,
+        _ y: Int,
+        with newColor: Color
+    ) {
+        // Fully transparent pixels leave the background unchanged
+        if newColor.a == 0 {
+            return
+        }
+
+        // Fully opaque pixels replace the background
+        if newColor.a == 255 {
+            self[x, y] = newColor
+            return
+        }
+
+        let oldColor = self[x, y]
+
+        let inverseAlpha =
+            1.0 - Double(newColor.a) / 255.0
+
+        // Images use premultiplied alpha
+        self[x, y] = Color(
+            r: UInt8(min(
+                255,
+                Double(oldColor.r) * inverseAlpha +
+                    Double(newColor.r)
+            )),
+            g: UInt8(min(
+                255,
+                Double(oldColor.g) * inverseAlpha +
+                    Double(newColor.g)
+            )),
+            b: UInt8(min(
+                255,
+                Double(oldColor.b) * inverseAlpha +
+                    Double(newColor.b)
+            ))
+        )
+    }
 
 
     
