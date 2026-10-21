@@ -37,6 +37,22 @@ public extension Bitmap {
     }
     
     
+    subscript(normalized x: Double, _ y: Double) -> Color {
+        let textureX = min(
+            width - 1,
+            max(0, Int(x * Double(width)))
+        )
+
+        let textureY = min(
+            height - 1,
+            max(0, Int(y * Double(height)))
+        )
+
+        return self[textureX, textureY]
+    }
+
+    
+    
     mutating func fill(rect: Rect, color: Color) {
         for y in Int(rect.min.y) ..< Int(rect.max.y) {
             for x in Int(rect.min.x) ..< Int(rect.max.x) {
@@ -78,6 +94,32 @@ public extension Bitmap {
             point += step
         }
     }
+    
+    
+    mutating func drawColumn(
+        _ sourceX: Int,
+        of source: Bitmap,
+        at point: Vector,
+        height: Double
+    ) {
+        guard height > 0 else { return }
+
+        let start = Int(point.y)
+        let end = Int((point.y + height).rounded(.up))
+        let stepY = Double(source.height) / height
+
+        for y in max(0, start) ..< min(self.height, end) {
+            let sourceY = max(0, Double(y) - point.y) * stepY
+
+            let textureY = min(
+                source.height - 1,
+                Int(sourceY)
+            )
+
+            self[Int(point.x), y] = source[sourceX, textureY]
+        }
+    }
+
 
 
     

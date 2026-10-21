@@ -26,6 +26,19 @@ private func loadMap() -> Tilemap {
     )
 }
 
+
+private func loadTextures() -> Textures {
+    Textures(loader: { name in
+        guard let image = UIImage(named: name),
+              let bitmap = Bitmap(image: image) else {
+            fatalError("Unable to load texture: \(name)")
+        }
+
+        return bitmap
+    })
+}
+
+
 // MARK: - Game View
 
 struct GameView: UIViewRepresentable {
@@ -69,6 +82,7 @@ struct GameView: UIViewRepresentable {
 
         // Game state
         private var world = World(map: loadMap())
+        private let textures = loadTextures()
         private var lastFrameTime: CFTimeInterval?
 
         // Frame timing
@@ -209,7 +223,8 @@ struct GameView: UIViewRepresentable {
             // Render first-person view
             var renderer = Renderer(
                 width: width,
-                height: height
+                height: height,
+                textures: textures
             )
 
             renderer.draw(world)
