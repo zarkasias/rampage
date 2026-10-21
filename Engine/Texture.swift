@@ -16,6 +16,12 @@ public enum Texture: String, CaseIterable {
     case wall2
     
     case monster2
+    
+    case monsterIdle1, monsterIdle2
+    case monsterIdle3, monsterIdle4
+
+    case monsterWalk1, monsterWalk2
+    case monsterWalk3, monsterWalk4
 }
 
 public struct Textures {

@@ -67,8 +67,26 @@ public extension World {
         player.position += player.velocity * timeStep
         
         
-        // Handle player-monster collisions
         
+        
+        // Update monsters
+     
+        // Update monsters
+        for i in monsters.indices {
+            var monster = monsters[i]
+
+            monster.update(in: self)
+
+            // Move the monster based on velocity and elapsed time
+            monster.position += monster.velocity * timeStep
+
+            monsters[i] = monster
+        }
+
+
+        
+        
+        // Handle player-monster collisions
         
         for i in monsters.indices {
             var monster = monsters[i]
